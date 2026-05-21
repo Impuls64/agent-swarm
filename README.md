@@ -29,23 +29,41 @@ AGENTS.md (Master)
         └── telegram-bot.md   # Telegram bots
 ```
 
+## Installation
+
+One-command setup:
+
+```bash
+git clone https://github.com/yourusername/kimi-swarm.git ~/.agents
+cd ~/.agents
+./install.sh
+```
+
+**That's it!** The installer will:
+- Create `~/AGENTS.md` symlink to master
+- Create `~/AGENTS_*.md` symlinks for all workers
+- Make scripts executable
+- Configure git
+
+Then restart opencode or run `/init`.
+
 ## Quick Start
 
 ```bash
 # List available workers
-./swarm.sh list
+~/.agents/swarm.sh list
 
 # Activate Python worker
-./swarm.sh activate python
+~/.agents/swarm.sh activate python
 
 # Activate multiple workers
-./swarm.sh activate python devops
+~/.agents/swarm.sh activate python devops
 
 # Check status
-./swarm.sh status
+~/.agents/swarm.sh status
 
 # Reset to master only
-./swarm.sh reset
+~/.agents/swarm.sh reset
 
 # Apply changes (restart opencode)
 ```
