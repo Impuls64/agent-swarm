@@ -1,5 +1,5 @@
 #!/bin/bash
-# Kimi Swarm — One-command installer
+# Agent Swarm — One-command installer
 # Usage: ./install.sh
 
 set -euo pipefail
@@ -7,7 +7,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGENTS_DIR="$HOME/.agents"
 
-echo "🚀 Kimi Swarm Installer"
+echo "🚀 Agent Swarm Installer"
 echo "======================"
 
 # Check if we're in ~/.agents
@@ -70,7 +70,7 @@ fi
 
 # Git config (if not set)
 if ! git config user.name >/dev/null 2>&1; then
-    git config user.name "Kimi Swarm"
+    git config user.name "Agent Swarm"
     git config user.email "agent@swarm.local"
     echo "✅ Git user configured"
 fi

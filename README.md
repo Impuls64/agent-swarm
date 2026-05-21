@@ -34,7 +34,7 @@ AGENTS.md (Master)
 One-command setup:
 
 ```bash
-git clone https://github.com/yourusername/kimi-swarm.git ~/.agents
+git clone https://github.com/yourusername/agent-swarm.git ~/.agents
 cd ~/.agents
 ./install.sh
 ```

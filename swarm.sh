@@ -1,5 +1,5 @@
 #!/bin/bash
-# Swarm Manager для Kimi Swarm
+# Swarm Manager для Agent Swarm
 # Использование: swarm.sh [list|status|activate|deactivate|reset]
 
 AGENTS_DIR="$HOME/.agents"
@@ -109,7 +109,7 @@ case "${1:-status}" in
         reset
         ;;
     *)
-        echo "Kimi Swarm Manager"
+        echo "Agent Swarm Manager"
         echo ""
         echo "Использование: $0 COMMAND [ARGS]"
         echo ""

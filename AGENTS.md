@@ -1,4 +1,4 @@
-# AGENTS.md — Kimi Swarm (Master)
+# AGENTS.md — Agent Swarm (Master)
 
 ## Project
 

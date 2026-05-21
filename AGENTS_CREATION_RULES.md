@@ -338,7 +338,7 @@ Opencode автоматически находит ближайший `AGENTS.md
 
 ### Master (AGENTS.md) — ~100 строк
 ```markdown
-# AGENTS.md — Kimi Swarm
+# AGENTS.md — Agent Swarm
 
 ## Роль
 Tech Lead. Не пишу код — координирую Workers.
