@@ -2,7 +2,7 @@
 
 > Professional swarm of specialized AI agents for software development
 
-## What is Kimi Swarm?
+## What is Agent Swarm?
 
 A **modular agent system** where each domain (Python, Frontend, DevOps, etc.) has its own specialized worker. A master coordinator routes tasks to the right expert.
 
