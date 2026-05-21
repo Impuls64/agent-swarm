@@ -43,16 +43,24 @@ fi
 ln -s "$AGENTS_DIR/master.md" "$HOME/AGENTS.md"
 echo "✅ Created ~/AGENTS.md → master.md"
 
-# Create symlinks for workers
+# Create symlinks for workers inside ~/.agents/
 for worker in "$AGENTS_DIR"/workers/*.md; do
     name=$(basename "$worker" .md)
-    link="$HOME/AGENTS_${name}.md"
+    link="$AGENTS_DIR/AGENTS_${name}.md"
     if [ -L "$link" ] || [ -f "$link" ]; then
         rm -f "$link"
     fi
     ln -s "$worker" "$link"
 done
-echo "✅ Created AGENTS_*.md symlinks for 12 workers"
+echo "✅ Created AGENTS_*.md symlinks in ~/.agents/"
+
+# Remove old ~/AGENTS_*.md symlinks (cleanup)
+for link in "$HOME"/AGENTS_*.md; do
+    if [ -L "$link" ]; then
+        rm -f "$link"
+    fi
+done
+echo "✅ Cleaned up old ~/AGENTS_*.md symlinks"
 
 # Initialize .active file
 if [ ! -f "$AGENTS_DIR/.active" ]; then
@@ -61,7 +69,7 @@ if [ ! -f "$AGENTS_DIR/.active" ]; then
 fi
 
 # Git config (if not set)
-if ! git config user.name >/devdev/null 2>&1; then
+if ! git config user.name >/dev/null 2>&1; then
     git config user.name "Kimi Swarm"
     git config user.email "agent@swarm.local"
     echo "✅ Git user configured"
@@ -69,6 +77,10 @@ fi
 
 echo ""
 echo "🎉 Installation complete!"
+echo ""
+echo "Structure:"
+echo "  ~/AGENTS.md              → ~/.agents/master.md"
+echo "  ~/.agents/AGENTS_*.md    → workers/*.md"
 echo ""
 echo "Quick start:"
 echo "  ~/.agents/swarm.sh list           # List workers"
@@ -80,4 +92,4 @@ echo ""
 echo "Create new project:"
 echo "  mkdir ~/projects/my-project"
 echo "  cp ~/.agents/master.md ~/projects/my-project/AGENTS.md"
-echo "  cp ~/.agents/workers/python.md ~/projects/my-project/AGENTS.md"
+echo "  cp ~/.agents/workers/python.md ~/projects/my-project/backend/AGENTS.md"

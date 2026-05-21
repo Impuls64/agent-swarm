@@ -1,0 +1,1 @@
+/home/bob/.agents/workers/gigachat.md

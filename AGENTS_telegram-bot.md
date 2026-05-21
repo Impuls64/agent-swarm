@@ -1,0 +1,1 @@
+/home/bob/.agents/workers/telegram-bot.md
