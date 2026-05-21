@@ -1,4 +1,4 @@
-# Kimi Swarm — Multi-Domain AI Agent System
+# Agent Swarm — Multi-Domain AI Agent System
 
 > Professional swarm of specialized AI agents for software development
 
