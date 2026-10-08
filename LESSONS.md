@@ -207,3 +207,10 @@ curl -s -A "Mozilla/5.0" "https://www.bing.com/news/search?q=...&format=rss"
 - OpenCode читает ТОЛЬКО ближайший `AGENTS.md` вверх по дереву + глобальный `~/.config/opencode/AGENTS.md`. Вложенные `backend/AGENTS.md` (паттерн монорепо из спецификации agents.md) НЕ читаются — это поведение Cursor/Copilot. Один проект = один AGENTS.md в корне.
 - Все 13 workers (~58 КБ, `osengine.md` — 18 КБ) в `instructions` подключать нельзя: постоянный раздув контекста. Router в master.md + чтение файла по требованию.
 - Дубли источников (master.md vs AGENTS.md vs ~/AGENTS.md) — источник рассинхрона. Решено разделением ролей: `master.md` = глобальные правила (через `instructions`), `~/.agents/AGENTS.md` = инструкции по работе в этом репо, `~/AGENTS.md` удалён.
+
+## 2026-10-08 — MCP fetch: парсинг RU-документации для LLM
+- Инструмент: `mcp-server-fetch` v2026.8.18 через `uv tool install`, битарь `~/.local/bin/mcp-server-fetch`. Подключён в `~/.config/opencode/opencode.jsonc` с `--ignore-robots-txt` (обязателен: RU-доки без этого режут по robots).
+- Проверено 200 OK и корректный markdown-вывод: `developers.sber.ru/docs/...`, `yandex.cloud/ru/docs/...`, `dadata.ru/api/clean/`, `mcs.mail.ru/docs/`. Недоступен: `cloud.tech/mfc/doc` (DNS/сеть мёртвые).
+- `context7` для RU не помогает: у него нет GigaChat/Yandex Cloud/Дадаты — это зарубежные базы. Для РФ-доков цепочка: fetch → текст → LLM (см. правила «RU-документация» в master.md).
+- Голая очистка HTML регексами (curl + regex) теряет контент: sber выдал 243 КБ HTML, из которых 3.3 КБ текста — таблицы параметров и примеры грузятся JS. Не писать свой парсер: mcp-fetch даёт нормальный markdown сразу.
+- Страницы Sber отдают `text/html` даже на `Accept: text/markdown` — забирать обычным режимом `format: "markdown"`, `html`-режим нужен только если нужна навигация со ссылками.
