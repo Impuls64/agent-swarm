@@ -84,7 +84,7 @@ pip install playwright --break-system-packages
 **Причина:** Симлинк `~/AGENTS.md` указывал на проект, при перемещении проекта симлинк сломался
 **Решение:** 
 - Для проектов: `use-project` скрипт пересоздаёт симлинк
-- Для глобальных правил: копия файла, не симлинк
+- Для глобальных правил: не файл в home, а `"instructions"` в `~/.config/opencode/opencode.jsonc` (см. запись 2026-10-08 ниже)
 ```bash
 # Проверка симлинка
 ls -la ~/AGENTS.md
@@ -206,4 +206,4 @@ curl -s -A "Mozilla/5.0" "https://www.bing.com/news/search?q=...&format=rss"
 - `swarm.sh activate/reset` делал `cp master.md ~/AGENTS.md` — файл молча перезаписывался, а `.active` расходился с реальным содержимым (`~/AGENTS.md` содержал одну строку при активных frontend/wordpress/tilda). Решение: удалить codegen, правила грузятся через `"instructions"` в `~/.config/opencode/opencode.jsonc` (`master.md` + `LESSONS.md`), workers читаются по Router-таблице по требованию.
 - OpenCode читает ТОЛЬКО ближайший `AGENTS.md` вверх по дереву + глобальный `~/.config/opencode/AGENTS.md`. Вложенные `backend/AGENTS.md` (паттерн монорепо из спецификации agents.md) НЕ читаются — это поведение Cursor/Copilot. Один проект = один AGENTS.md в корне.
 - Все 13 workers (~58 КБ, `osengine.md` — 18 КБ) в `instructions` подключать нельзя: постоянный раздув контекста. Router в master.md + чтение файла по требованию.
-- Дубли источников (master.md vs AGENTS.md vs ~/AGENTS.md) — источник рассинхрона. `~/.agents/AGENTS.md` теперь симлинк на `master.md`.
+- Дубли источников (master.md vs AGENTS.md vs ~/AGENTS.md) — источник рассинхрона. Решено разделением ролей: `master.md` = глобальные правила (через `instructions`), `~/.agents/AGENTS.md` = инструкции по работе в этом репо, `~/AGENTS.md` удалён.

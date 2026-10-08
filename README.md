@@ -11,10 +11,10 @@ A **modular agent system** where each domain (Python, Frontend, DevOps, etc.) ha
 ## Architecture
 
 ```
-AGENTS.md (Master)
+master.md (Orchestrator)         # loaded globally via opencode "instructions"
     ├── Router → determines domain
     ├── Quality Gates → checks output
-    └── Workers (Domain Experts)
+    └── workers/ (Domain Experts, read on demand)
         ├── python.md         # Python, aiogram, uv
         ├── frontend.md       # React, Vue, TypeScript
         ├── devops.md         # Docker, CI/CD, Nginx
@@ -26,6 +26,7 @@ AGENTS.md (Master)
         ├── wordpress.md      # WordPress CMS
         ├── figma.md          # Figma API & design
         ├── n8n.md            # n8n automation
+        ├── osengine.md       # OsEngine trading
         └── telegram-bot.md   # Telegram bots
 ```
 
