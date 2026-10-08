@@ -1,103 +1,139 @@
-# OsEngine Worker Rules
+# OsEngine Worker (upstream rules)
 
-## Domain
+Алгориттическая торговля на C# (WPF/WinForms), open-source платформа OsEngine.
 
-Algorithmic trading platform development with OsEngine (C#, WPF/WinForms, .NET 9).
+**Триггеры:** `osengine`, `os engine`, `осэнжин`, `trading bot`, `торговый робот`,
+`алготрейдинг`, `c# trading`, `оптимизатор`, `bot panel`, `MOEX connector`,
+`crypto exchange connector`, `технический индикатор`, `backtest`, `walk-forward`
 
-## Triggers
+**Источник правил:** [`project/AGENTS.md`](https://github.com/AlexWan/OsEngine/blob/master/project/AGENTS.md)
+репозитория `AlexWan/OsEngine` (1033⭐, ветка `master`, синхронизировано 2026-10-08).
+Блок ниже — **дословно**, он главный: при конфликте правил выигрывает он.
+Обновлять только пересинхронизацией с upstream, иначе разойдётся.
 
-Activate this worker when the user mentions:
-- `osengine`, `os engine`, `осэнжин`
-- `trading bot`, `торговый робот`, `алготрейдинг`
-- `c# trading`, `csharp trading`, `си шарп трейдинг`
-- `optimizer`, `оптимизатор`
-- `bot panel`, `botpanel`, `ботпанель`
-- `MOEX connector`, `crypto exchange connector`
-- `technical indicator`, `технический индикатор`
-- `backtest`, `бэктест`, `walk-forward`
+**Отличия окружения (opencode/WSL2, не Kimi Shell):**
+- `WriteFile` / `StrReplaceFile` → инструменты `write` / `edit`; `Shell` → `bash`; `Agent(...)` → task tool.
+- В этом окружении .NET SDK нет; сборка идёт на машине с проектом. Отсюда (WSL2) видны только
+  копии в `~/Engine` и бэкапы в `~/osengine_backups` — править их как рабочие файлы нельзя.
+- Собрать Windows-бинарь через WSL: `"/mnt/c/Program Files/dotnet/dotnet.exe" build OsEngine/OsEngine.csproj`
+  (пути — относительно `project/`, как требует «Среда» в правилах).
+- Перед работой читать `CONTEXT.md` и доменный `CONTEXT_*.md` из upstream — их даром в файле
+  не переписать, но ссылки в правилах на них реальны.
 
-## Project Location
+---
 
-```
-D:\OsEngine-master\
-  project\
-    OsEngine.sln
-    OsEngine\
-      OsEngine.csproj
-```
+# AGENTS.md — Правила для ИИ-агентов
 
-## Technology Stack
+> Действует на корень проекта и подкаталоги. Собственный `AGENTS.md` в подкаталоге имеет приоритет.
 
-- **Language:** C# 12 (.NET 9)
-- **UI:** WPF + WinForms (hybrid, WindowsFormsHost)
-- **Platform:** Windows x64
-- **Build:** MSBuild SDK-style project
-- **Data:** LiteDB (NoSQL), text files (`Engine/*.txt`)
-- **Network:** HttpClient, WebSocket4Net, Grpc.Net.Client
-- **Serialization:** Newtonsoft.Json, Google.Protobuf
-- **Scripting:** Roslyn (Microsoft.CodeAnalysis.CSharp)
+## Перед работой
 
-## Compilation Rules (CRITICAL)
+1. [`CONTEXT.md`](CONTEXT.md) — карта проекта.
+2. [`CONTEXT_CODING_GUIDELINES.md`](CONTEXT_CODING_GUIDELINES.md) — стиль кода.
+3. Доменный `CONTEXT_*.md` по задаче.
+4. Работа с коннекторами (`OsEngine/Market/Servers/`) → [`CONTEXT_CONNECTORS.md`](CONTEXT_CONNECTORS.md).
 
-**Important:** OsEngine is a compiled application. Changes to `.cs` or `.xaml` files do NOT take effect until the project is rebuilt.
+## Принципы
 
-### Rebuilding Without Visual Studio
+- Код изменяется только через инструменты (`WriteFile`, `StrReplaceFile`, `Shell`). Показать код в чате — не замена.
+- Минимальные изменения. Сохраняй стиль и сигнатуры.
+- Не ломай обратную совместимость без необходимости.
+- Сохраняй кодировку файлов: не снимай UTF-8 BOM, если он был, и не меняй CRLF на LF — это засоряет дифф.
+- Собирай и тестируй после правок.
 
-If you don't have Visual Studio installed, use the .NET CLI:
+## Сборка и тесты
 
 ```bash
-# Navigate to project directory
-cd "D:\OsEngine-master\project\OsEngine"
+# Завершить процесс, если запущен
+taskkill /F /IM OsEngine.exe
 
-# Build the project
-dotnet build
+# Сборка основного проекта (обычный случай)
+dotnet build OsEngine/OsEngine.csproj
 
-# Or rebuild completely (clean + build)
-dotnet build --no-incremental
+# Полная сборка решения — только если тронуты Tests/*
+# (DividendsUpdater, McpTestStand и т.п.) или перед релизом
+dotnet build OsEngine.sln
 
-# For Release mode
-dotnet build -c Release
+# Тестовый стенд MCP
+cd Tests/McpTestStand/OsEngine.McpApi.TestStand/bin/Debug/net10.0
+./OsEngine.McpApi.TestStand.exe
+
+# Только выбранные модули: номер или подстрока имени, через запятую
+# (1 Protocol, 2 Logs, 3 Settings, 4 Config, 5 ServerManagement,
+#  6 ServerInstance, 7 SSE, 8 Errors, 9 WikiRobots, 10 WikiIndicators,
+#  11 WikiSecurities, 12 WikiDividends, 13 Data, 14 Tester, 15 Terminal,
+#  16 SystemLoad, 17 ComparePositions, 18 Proxy, 19 Optimizer, 20 Encryption)
+./OsEngine.McpApi.TestStand.exe --module Tester
+./OsEngine.McpApi.TestStand.exe --module 5,6
 ```
 
-**Prerequisites:** .NET 9 SDK must be installed. Download from https://dotnet.microsoft.com/download
+Цель стенда: **200/200 passed** (`--transport v2`) и **191/191 passed** (`--transport v1`).
 
-### Automatic Build (AI can build for you)
+**Важно:** тестовый стенд MCP API (`OsEngine.McpApi.TestStand.exe`) запускать только с **явного разрешения пользователя**.
 
-The AI can trigger Windows `dotnet.exe` directly from the Linux environment via WSL:
-```bash
-"/mnt/c/Program Files/dotnet/dotnet.exe" build "D:\OsEngine-master\project\OsEngine\OsEngine.csproj"
+Стенд работает в foreground. При запуске из Kimi Shell он создаёт собственное видимое консольное окно; вывод дублируется в это окно, в исходный stdout и в лог-файл `mcp-test-stand-yyyyMMdd-HHmmss.log` рядом с `.exe`. Запрещено использовать `run_in_background=true`. Длительность прогона — около 4 минут; дожидаться завершения через `TaskOutput(block=true)` или автоматическое уведомление.
+
+## Исследование кода
+
+- Известный путь / 1–2 запроса: `ReadFile`, `Grep`.
+- Больше 3 запросов или незнакомый модуль: `Agent(subagent_type="explore")`.
+- Планирование: `Agent(subagent_type="plan")`.
+- Сложная задача: `Agent(subagent_type="coder")`.
+
+## Запрещено без разрешения пользователя
+
+- `git commit`, `git push`, `git reset`, `git rebase`.
+- Изменения файлов за пределами рабочей директории.
+- Установка ПО за пределами рабочей директории.
+- Операции с правами администратора.
+
+## Обновляй документацию
+
+Если меняешь:
+
+- MCP API (V2, рекомендуемая) → `CONTEXT_MCP_V2.md`, `TempContext/CONTEXT_MCP_API_DEVELOPMENT.md`.
+- MCP API (V1, легаси) → `CONTEXT_MCP_V1.md`.
+- Сценарии MCP → `CONTEXT_MCP_SCENARIO_V2.md` (V2) / `CONTEXT_MCP_SCENARIO_V1.md` (V1, легаси).
+- Соглашения → `CONTEXT_CODING_GUIDELINES.md`.
+- Карту проекта → `CONTEXT.md`.
+- Правила агентов → этот файл.
+
+## Среда
+
+- Windows, Git Bash.
+- Пути в Shell: используй относительные пути от рабочей директории проекта (`./OsEngine/...`, `./Tests/...`).
+- Долгие операции — с `run_in_background=true`.
+
+## Спрашивай пользователя
+
+- Несколько валидных подходов.
+- Неясный масштаб или требования.
+- Нужны реальные учётные данные для тестов.
+
+## Чек-лист перед ответом
+
+- [ ] Код записан в файловую систему.
+- [ ] Сборка успешна (`dotnet build OsEngine/OsEngine.csproj`; для `Tests/*` — `dotnet build OsEngine.sln`).
+- [ ] Релевантные тесты пройдены.
+- [ ] Документация обновлена при необходимости.
+- [ ] Git не мутировал без разрешения.
+
+---
+
+# Локальная справка (НЕ из upstream)
+
+Всё, что ниже — справочные знания про код проекта. Правилами остаётся блок
+«AGENTS.md — Правила для ИИ-агентов» выше; при расхождении он главный.
+Этот файл — исключение из лимита ≤200 строк на worker (справочник, не регламент).
+
+## Структура проекта
+
 ```
-
-Or use the provided PowerShell script:
-```powershell
-# One-click build & run
-D:\OsEngine-master\build.ps1
-```
-
-The script (`build.ps1`) will:
-1. Build the project
-2. Show errors if any
-3. Automatically launch `OsEngine.exe` on success
-
-### XAML Compilation
-
-XAML files are compiled into BAML and embedded in the assembly. Simply editing `.xaml` files will NOT update the running `.exe`. You MUST rebuild the project.
-
-### Running After Build
-
-After building, the executable is at:
-```
-D:\OsEngine-master\project\OsEngine\bin\Debug\OsEngine.exe
-```
-
-## Complete Project Structure
-
-```
-D:\OsEngine-master/
+./                          # корень клона AlexWan/OsEngine; рабочая директория — ./project
 ├── project/
 │   ├── OsEngine.sln
 │   └── OsEngine/
-│       ├── OsEngine.csproj          (SDK-style, net9.0-windows)
+│       ├── OsEngine.csproj          (SDK-style; TFM смотреть в файле, не угадывать)
 │       ├── App.xaml / App.xaml.cs   (Application entry point)
 │       ├── MainWindow.xaml / .cs    (Main menu with buttons)
 │       │
@@ -115,97 +151,46 @@ D:\OsEngine-master/
 │       │   ├── OptimizerExecutor.cs (Execution engine)
 │       │   ├── OptimizerUi.xaml / .cs
 │       │   ├── OptimizerReport.cs   (Results data structures)
-│       │   ├── SmartOptimizerUi.xaml / .cs  (NEW: Smart Optimizer)
+│       │   ├── SmartOptimizerUi.xaml / .cs
 │       │   └── OptEntity/
-│       │       ├── AsyncBotFactory.cs
-│       │       └── OptimizerDataStorage.cs
 │       │
 │       ├── OsData/                  (Historical data downloader)
 │       ├── OsConverter/             (Data converter)
 │       │
-│       ├── Robots/                  (~158 built-in strategies)
+│       ├── Robots/                  (built-in strategies)
 │       │   ├── BotFactory.cs        (Robot factory / reflection)
-│       │   ├── Trend/               (Trend strategies)
-│       │   ├── CounterTrend/        (Counter-trend strategies)
-│       │   ├── MarketMaker/         (MM strategies)
-│       │   ├── Screeners/           (Multi-security screeners)
-│       │   ├── OnScriptIndicators/  (Indicator-based bots)
-│       │   ├── Grids/               (Grid trading)
-│       │   ├── FuturesTrend/        (Futures-specific)
-│       │   ├── IndexArbitrage/      (Index arbitrage)
-│       │   └── [30+ more folders]
+│       │   ├── Trend/  CounterTrend/  MarketMaker/
+│       │   ├── Screeners/  OnScriptIndicators/  Grids/  FuturesTrend/  IndexArbitrage/
 │       │
 │       ├── Market/                  (Exchange connectors)
 │       │   ├── Servers/
 │       │   │   ├── IServer.cs
 │       │   │   ├── AServer.cs
-│       │   │   ├── [Exchange folders:]
-│       │   │   ├── Tinkoff/
-│       │   │   ├── ByBit/
-│       │   │   ├── Binance/
-│       │   │   ├── Transaq/
-│       │   │   ├── QuikLua/
-│       │   │   └── [60+ more]
+│       │   │   ├── Tinkoff/  ByBit/  Binance/  Transaq/  QuikLua/  [60+ more]
 │       │   └── Connectors/
 │       │
-│       ├── Entity/                  (Domain models)
-│       │   ├── Security.cs
-│       │   ├── Portfolio.cs
-│       │   ├── Order.cs / MyTrade.cs
-│       │   ├── Position.cs
-│       │   ├── Candle.cs / CandleSeries.cs
-│       │   ├── MarketDepth.cs
-│       │   └── Trade.cs
-│       │
-│       ├── Candles/                 (Candle engine)
-│       │   ├── CandleManager.cs
-│       │   ├── CandleFactory.cs
-│       │   └── TimeFrameBuilder.cs
-│       │
-│       ├── Charts/                  (Charting)
-│       │   ├── IChartPainter.cs
-│       │   └── WinFormsChartPainter.cs
-│       │
-│       ├── Indicators/              (Indicator factory)
-│       │   ├── IIndicator.cs
-│       │   ├── Aindicator.cs
-│       │   ├── IndicatorsFactory.cs
-│       │   └── AindicatorCacheServer.cs
-│       │
-│       ├── Journal/                 (Trade journal)
-│       │   ├── Journal.cs
-│       │   └── Internal/
-│       │       ├── PositionController.cs
-│       │       └── DealStatisticGenerator.cs
-│       │
-│       ├── Logging/                 (Logs & notifications)
-│       │   ├── Log.cs
-│       │   ├── MessageSender.cs
-│       │   ├── ServerTelegram.cs    (Telegram bot integration)
-│       │   ├── ServerMail.cs
-│       │   └── ServerWebhook.cs
-│       │
-│       ├── Language/                (Ru/En localization)
-│       │   └── OsLocalization.cs
-│       │
-│       ├── Alerts/                  (Price alerts)
-│       ├── PrimeSettings/           (Global settings)
-│       └── Layout/                  (Window layout manager)
-│
-├── related projects/
-│   ├── TInvestApi/                  (Tinkoff gRPC API)
-│   ├── TinkoffInvestmentsApi/
-│   └── Tinkoff_Router/
-│
+│       ├── Entity/                  (Domain models: Security, Portfolio, Order, MyTrade,
+│       │                            Position, Candle/CandleSeries, MarketDepth, Trade)
+│       ├── Candles/                 (CandleManager, CandleFactory, TimeFrameBuilder)
+│       ├── Charts/                  (IChartPainter, WinFormsChartPainter)
+│       ├── Indicators/              (IIndicator, Aindicator, IndicatorsFactory,
+│       │                            AindicatorCacheServer)
+│       ├── Journal/                 (Journal, PositionController, DealStatisticGenerator)
+│       ├── Logging/                 (Log, MessageSender, ServerTelegram, ServerMail,
+│       │                            ServerWebhook)
+│       ├── Language/                (Ru/En localization: OsLocalization.cs)
+│       ├── Alerts/  PrimeSettings/  Layout/
+├── related projects/                (TInvestApi, TinkoffInvestmentsApi, Tinkoff_Router,
+│                                    FinamApi — submodule)
 └── doc/                             (Documentation, manuals)
 ```
 
-## Key Abstractions
+## Ключевые абстракции
 
-| Component | Class/Interface | File |
-|-----------|----------------|------|
-| Robot base | `BotPanel` (abstract) | `OsTrader/Panels/BotPanel.cs` |
-| Server | `IServer` + `AServer` | `Market/Servers/` |
+| Компонент | Класс/интерфейс | Файл |
+|-----------|-----------------|------|
+| Робот (база) | `BotPanel` (abstract) | `OsTrader/Panels/BotPanel.cs` |
+| Сервер | `IServer` + `AServer` | `Market/Servers/` |
 | Security | `Security` | `Entity/Security.cs` |
 | Order | `Order` / `MyTrade` | `Entity/Order.cs` |
 | Position | `Position` | `Entity/Position.cs` |
@@ -217,7 +202,6 @@ D:\OsEngine-master/
 
 ## BotPanel API
 
-### Constructor
 ```csharp
 public MyBot(string name, StartProgram startProgram) : base(name, startProgram)
 {
@@ -227,302 +211,115 @@ public MyBot(string name, StartProgram startProgram) : base(name, startProgram)
 }
 ```
 
-### Tab Types
-- `BotTabType.Simple` - Single instrument
-- `BotTabType.Index` - Index from multiple instruments
-- `BotTabType.Screener` - Multi-instrument screener
-- `BotTabType.Pair` - Pair trading
-- `BotTabType.Polygon` - Currency arbitrage
-- `BotTabType.Cluster` - Cluster chart
-- `BotTabType.News` - News feed
-- `BotTabType.Options` - Options
-- `BotTabType.SyntheticBond` - Synthetic bonds
+Типы табов: `Simple`, `Index`, `Screener`, `Pair`, `Polygon`, `Cluster`, `News`, `Options`, `SyntheticBond`.
 
-### Events
 ```csharp
-_tab.CandleFinishedEvent += OnCandleFinished;      // Candle closed
-_tab.CandleUpdateEvent += OnCandleUpdate;            // Candle updated (tick)
-_tab.MarketDepthUpdateEvent += OnMarketDepth;        // Market depth update
-_tab.NewTickEvent += OnNewTick;                      // New tick
-_tab.PositionOpeningSuccesEvent += OnPositionOpen;   // Position opened
-_tab.PositionClosingSuccesEvent += OnPositionClose;  // Position closed
-```
+_tab.CandleFinishedEvent += OnCandleFinished;      // свеча закрыта
+_tab.CandleUpdateEvent += OnCandleUpdate;          // обновление свечи
+_tab.MarketDepthUpdateEvent += OnMarketDepth;      // стакан
+_tab.NewTickEvent += OnNewTick;                    // новый тик
+_tab.PositionOpeningSuccesEvent += OnPositionOpen; // позиция открыта
+_tab.PositionClosingSuccesEvent += OnPositionClose;// позиция закрыта
 
-### Trading Methods
-```csharp
-// Market orders
 _tab.BuyAtMarket(volume, "Comment");
 _tab.SellAtMarket(volume, "Comment");
-
-// Limit orders
 _tab.BuyAtLimit(volume, price, "Comment");
 _tab.SellAtLimit(volume, price, "Comment");
-
-// Stop orders
 _tab.BuyAtStop(volume, price, stopPrice, "Comment");
-_tab.SellAtStop(volume, price, stopPrice, "Comment");
+_tab.CancelAllOrders();
+_tab.CloseAllAtMarket();
+_tab.CloseAllAtLimit(price);
 
-// Close positions
-_tab.CloseAllAtMarket();           // Close all at market
-_tab.CloseAllAtLimit(price);       // Close all at limit
-_tab.CancelAllOrders();            // Cancel active orders
-```
-
-### Parameters
-```csharp
-// Integer
+// Параметры робота
 StrategyParameterInt period = CreateParameter("Period", 14, 5, 50, 1);
-
-// Decimal
 StrategyParameterDecimal sl = CreateParameter("StopLoss", 0.5m, 0.1m, 5m, 0.1m);
-
-// Bool
 StrategyParameterBool useTrailing = CreateParameter("UseTrailing", false);
-
-// String/Enum
 StrategyParameterString mode = CreateParameter("Mode", "Trend", new List<string> { "Trend", "Flat" });
-
-// Decimal + CheckBox
 StrategyParameterDecimalCheckBox filter = CreateParameter("Filter", 100m, 10m, 1000m, 10m);
 ```
 
 ## Optimizer API
 
-### Key Classes
-- `OptimizerMaster` - Main controller, manages optimization process
-- `OptimizerExecutor` - Executes tests in threads
-- `OptimizerReport` - Single test result
-- `OptimizerFazeReport` - Results for one phase (InSample/OutOfSample)
+- `OptimizerMaster` — контроллер процесса оптимизации
+- `OptimizerExecutor` — выполнение тестов в потоках
+- `OptimizerReport` — результат одного теста
+- `OptimizerFazeReport` — результат фазы (InSample/OutOfSample)
 
-### Smart Search (NEW)
-- Enabled by default: `SmartSearchIsOn = true`
-- Iterative adaptive refinement:
-  1. Iteration 1: Coarse search with large step
-  2. Select best by Score = Profit × PF × Sharpe
-  3. Narrow range around best, halve step
-  4. Repeat until convergence (step = 1 for int, 0.01 for decimal)
-- Results saved to: `Engine\SmartOptimizerResults\`
+Smart Search (`SmartSearchIsOn = true`): крупный шаг → отбор лучших по
+`Score = Profit × PF × Sharpe` → сужение диапазона и шаг вдвое → до сходимости.
+Результаты: `Engine/SmartOptimizerResults/`.
 
-## Configuration Files
+## Конфигурационные файлы
 
-| File | Purpose |
-|------|---------|
-| `Engine\OptimizerSettings.txt` | Optimizer configuration |
-| `Engine\telegramSet.txt` | Telegram bot settings (4 lines: Token, ChatId, Processing, Proxy) |
-| `Engine\*.txt` | Component settings (various) |
-| `bin\Debug\Custom\Robots\` | Custom robot scripts |
-| `bin\Debug\Custom\Indicators\` | Custom indicators |
+| Файл | Назначение |
+|------|------------|
+| `Engine/OptimizerSettings.txt` | настройки оптимизатора |
+| `Engine/telegramSet.txt` | Telegram: 4 строки `Token / ChatId / Processing / Proxy` |
+| `Engine/*.txt` | настройки компонентов |
+| `bin/Debug/Custom/Robots/` | пользовательские роботы |
+| `bin/Debug/Custom/Indicators/` | пользовательские индикаторы |
 
-## Code Conventions
+## Конвенции кода
 
-- Follow existing OsEngine style (mixed Ru/En comments accepted)
-- Use `SendNewLogMessage(msg, LogMessageType)` for logging
-- Parameters: `CreateParameter(name, default, start, stop, step)`
-- Events: `CandleFinishedEvent`, `PositionOpeningSuccesEvent`
-- Tab access: `TabsSimple[0]` after `TabCreate(BotTabType.Simple)`
-- Never hardcode paths; use `Engine\` or `Custom\` relative paths
-- Handle exceptions with try/catch; log errors
+- Стиль OsEngine: смешанные Ru/En комментарии допустимы
+- Логирование: `SendNewLogMessage(msg, LogMessageType)`
+- Параметры: `CreateParameter(name, default, start, stop, step)`
+- Не хардкодить абсолютные пути — только `Engine/` и `Custom/` внутри приложения
+- Исключения — с try/catch и логированием, не глотать
 
-## Common Tasks
+## Типовые задачи
 
-### Create a new robot
-1. Inherit from `BotPanel`
-2. Call `TabCreate(BotTabType.Simple)` in constructor
-3. Subscribe to `_tab.CandleFinishedEvent`
-4. Implement entry/exit logic
-5. Override `GetNameStrategyType()`
+**Новый робот:** унаследовать `BotPanel` → `TabCreate(BotTabType.Simple)` в конструкторе →
+подписаться на `_tab.CandleFinishedEvent` → реализовать вход/выход → переопределить `GetNameStrategyType()`.
 
-### Add a new exchange connector
-1. Create folder in `Market/Servers/`
-2. Implement `IServerRealization`
-3. Wire up events: `NewCandleIncomeEvent`, `NewTradeEvent`, etc.
+**Новый коннектор биржи:** папка в `Market/Servers/` → реализовать `IServerRealization` →
+связать события (`NewCandleIncomeEvent`, `NewTradeEvent` и др.).
 
-### Fix Telegram (Russia block)
-- Edit `Engine\telegramSet.txt` — add proxy URL line 4
-- Format: `BotToken\nChatId\nTrue\nsocks5://proxy:port`
-- Or edit `Logging/ServerTelegram.cs` directly
+**Telegram из РФ (блокировка):** в `Engine/telegramSet.txt` 4-й строкой добавить
+`socks5://proxy:port`; альтернатива — правка `Logging/ServerTelegram.cs`.
 
-### Speed up Optimizer
-- Enable `AindicatorCacheServer.IsOn = true`
-- Increase `ThreadsCount` (up to CPU cores)
-- Enable `SmartSearchIsOn` (enabled by default now)
+**Ускорить Optimizer:** `AindicatorCacheServer.IsOn = true`, `ThreadsCount` по числу ядер,
+`SmartSearchIsOn` включён по умолчанию.
 
-## .NET 9 Reference
+## XAML и пересборка
 
-Use Context7 library `/dotnet/docs` for C# language and API reference.
-Key topics:
-- `HttpClient` / `HttpClientHandler` / proxy configuration
-- `Task` / `async await` / `Parallel.ForEach`
-- `LINQ` / `Collections.Generic`
-- `Memory<T>` / `Span<T>` performance
-- `Unsafe` blocks (project has `AllowUnsafeBlocks=true`)
+XAML компилируется в BAML и встраивается в сборку: правка `.xaml` не меняет
+уже запущенный `.exe` — обязательна пересборка.
 
 ## Quality Gates
 
-- No bare `catch` without logging
-- No hardcoded secrets (use `.env` or config files)
-- Test on Tester before real trading
-- Walk-forward validation for optimized parameters
-- RiskManager must be configured
+- Нет `catch` без логирования
+- Нет хардкода секретов (`.env` или конфиги)
+- Тест на Tester перед реальной торговлей
+- Walk-forward для оптимизированных параметров
+- RiskManager настроен
 
-## Backup
+## Проверки после обновления проекта (git pull / распаковка архива)
 
-Before editing: backup to `~/osengine_backups/current/` (override per machine if backups live elsewhere).
+1. **Дубли `.cs`:** `find OsEngine/Market/Servers -name "*.cs" | xargs -n1 basename | sort | uniq -d`
+   — удалять старую копию, оставлять новую структуру (напр. `BitMartSpot/BitMartSpotServer.cs`).
+2. **CS0535** (не реализован член интерфейса): типичные — `Connect(WebProxy)`,
+   `Subscribe(Security)`, `SetLeverage()`, `GetActiveOrders()`, `GetActiveOrders()` +
+   новые свойства `IServerPermission`. Лечение: обновить файл сервера или удалить сервер.
+3. **CS0101** (дубль типа): чаще всего `Pagination` в разных `CoinEx/Entity` — переименовать
+   (`PaginationFutures`, `CoinExPagination`).
+4. **CS0111** (дубль члена) / **CS0246** (тип не найден): следы удалённых/переехавших классов.
+5. **CS0579**: удалить `Properties/AssemblyInfo.cs`, если рядом автогенерация.
+6. **Удалённые сервера:** убрать `else if` блоки из `ServerMaster.cs` и `FixMessage.cs`.
+7. **Runtime:** `concurrent update` / `NullReferenceException` в `ChartClusterPainter.cs` —
+   проверять `InvokeRequired` и null перед `.Points`; `MissingMethodException` — чистить `obj/`/`bin/`;
+   `FileNotFoundException` на `Engine/*.txt` — создать с дефолтами.
+8. **Чистая сборка:** `rm -rf obj bin/Debug/OsEngine.exe` → пересборка → проверить наличие `.exe`.
+9. **Чек-лист:** 0 ошибок сборки → `OsEngine.exe` запускается → открываются Main,
+   Optimizer и Tester без падений.
 
-## Error Checking & Verification Rules
+## Справочник C#
 
-### After Project Update (CRITICAL)
+Для языка и API — Context7 `/dotnet/docs`; версию TFM смотреть в `OsEngine.csproj`
+(стенд тестов в upstream собирается под `net10.0` — не угадывать по старой памяти).
 
-When OsEngine project is updated (git pull, zip extract, etc.), ALWAYS run these checks:
+## Локальные пути
 
-#### 1. Duplicate Files Check
-```bash
-# Find duplicate .cs files across server folders
-find project/OsEngine/Market/Servers -name "*.cs" | xargs -I {} basename {} | sort | uniq -d
-
-# Find duplicate class definitions
-grep -r "class .*ServerRealization" project/OsEngine/Market/Servers/ | awk '{print $3}' | sort | uniq -d
-```
-
-**Common duplicates after update:**
-- Old root files vs new subfolder files (e.g., `BitMart.cs` vs `BitMartSpot/BitMartSpotServer.cs`)
-- Old `Entity/` folders vs new `Entity/` folders
-- Old `Json/` folders vs new `Json/` folders
-- `*ServerPermission.cs` files moved to subfolders
-
-**Fix:** Remove OLD files, keep NEW structure.
-
-#### 2. Missing Interface Implementation Check
-```bash
-# Build and look for CS0535 errors
-# Common missing members after update:
-# - IServerRealization: Connect(WebProxy), Subscribe(Security), SetLeverage(), GetActiveOrders(), GetHistoricalOrders()
-# - IServerPermission: new bool properties
-```
-
-**Fix:** Update old server files or remove deprecated servers.
-
-#### 3. Namespace / Class Name Conflicts
-```bash
-# Look for CS0101 errors (duplicate type names)
-grep -r "class .*" project/OsEngine/Market/Servers/*/Entity/*.cs | grep -v "/bin/"
-```
-
-**Common conflicts:**
-- `Pagination` class in multiple CoinEx Entity folders
-- `ResponseRestMessage` classes with same namespace
-- `Signer` utility class missing
-
-**Fix:** Rename classes (e.g., `Pagination` → `PaginationFutures`, `CoinExPagination`) or merge files.
-
-#### 4. Removed Server References Check
-```bash
-# Check ServerMaster.cs for references to deleted servers
-grep -n "ExmoSpotServer\|LmaxServer\|TinkoffServer" project/OsEngine/Market/ServerMaster.cs
-```
-
-**Fix:** Remove `else if` blocks for deleted servers from `ServerMaster.cs` and `FixProtocolEntities/FixMessage.cs`.
-
-#### 5. Build Verification
-```bash
-# Must show "Ошибок: 0" (0 errors)
-"/mnt/c/Program Files/dotnet/dotnet.exe" build "D:\OsEngine-master\project\OsEngine\OsEngine.csproj"
-```
-
-**Build command from WSL:**
-```bash
-"/mnt/c/Program Files/dotnet/dotnet.exe" build "D:\OsEngine-master\project\OsEngine\OsEngine.csproj" 2>&1 | tail -5
-```
-
-#### 6. Runtime Error Checking
-
-After successful build, launch `OsEngine.exe` and watch for:
-
-**Common runtime errors:**
-
-| Error | File | Fix |
-|-------|------|-----|
-| `InvalidOperationException: concurrent update` | `ChartClusterPainter.cs` | Ensure UI thread creation; add null checks |
-| `NullReferenceException` | `ChartClusterPainter.cs` | Add null checks before accessing `.Points.Count` |
-| `MissingMethodException` | Various | Old binary cached; clean `obj/` and `bin/` folders |
-| `FileNotFoundException` | `Engine/*.txt` | Create missing config files with defaults |
-| `DllNotFoundException` | Native DLLs | Ensure `libcrypto-3-x64.dll`, `libssl-3-x64.dll` in output |
-
-**ChartClusterPainter fixes:**
-```csharp
-// In CreateChart() - ensure UI thread
-if (_chart == null)
-{
-    _chart = new Chart();  // Don't recreate if exists
-}
-
-// In ClearDataPointsAndSizeValue() - null check
-Series oldcandleSeries = FindSeriesByNameSafe("SeriesCluster");
-if (oldcandleSeries != null && oldcandleSeries.Points.Count != 0)
-{
-    oldcandleSeries.Points.ClearFast();
-}
-```
-
-#### 7. Clean Build Procedure
-
-If build has persistent errors:
-```bash
-# 1. Clean everything
-rm -rf "D:\OsEngine-master\project\OsEngine\obj"
-rm -rf "D:\OsEngine-master\project\OsEngine\bin\Debug\OsEngine.exe"
-
-# 2. Rebuild
-"/mnt/c/Program Files/dotnet/dotnet.exe" build "D:\OsEngine-master\project\OsEngine\OsEngine.csproj"
-
-# 3. Verify executable exists
-ls -la "D:\OsEngine-master\project\OsEngine\bin\Debug\OsEngine.exe"
-```
-
-#### 8. Post-Update Checklist
-
-- [ ] No CS0111 (duplicate member) errors
-- [ ] No CS0535 (missing interface) errors  
-- [ ] No CS0101 (duplicate type) errors
-- [ ] No CS0246 (type not found) errors
-- [ ] Build: 0 errors, 0 warnings ideally
-- [ ] `OsEngine.exe` launches without crash
-- [ ] Main window opens (no XAML errors)
-- [ ] Can open Optimizer window
-- [ ] Can open Tester window
-
-### Common Error Patterns & Solutions
-
-**Pattern 1: `CS0111 — Type already defines member`**
-- Cause: Duplicate method from old + new file
-- Fix: Remove older file version
-
-**Pattern 2: `CS0535 — Does not implement interface member`**
-- Cause: Old server file missing new interface methods
-- Fix: Update file from GitHub or delete deprecated server
-
-**Pattern 3: `CS0101 — Namespace already contains definition`**
-- Cause: Same class name in two files
-- Fix: Rename one class or remove duplicate file
-
-**Pattern 4: `CS0246 — Type or namespace not found`**
-- Cause: Referenced class was deleted/moved
-- Fix: Remove using directive or update reference
-
-**Pattern 5: `CS0579 — Duplicate attribute`**
-- Cause: `AssemblyInfo.cs` exists + auto-generated
-- Fix: Delete `Properties/AssemblyInfo.cs`
-
-**Pattern 6: Runtime `NullReferenceException` in Charts**
-- Cause: Series/Points accessed without null check
-- Fix: Add `!= null` checks before accessing chart elements
-
-**Pattern 7: Runtime `InvalidOperationException` in FontCache**
-- Cause: Chart created on non-UI thread
-- Fix: Ensure `InvokeRequired` check covers null case; don't recreate Chart if exists
-
-## Related Files
-
-- `D:\OsEngine-master\OsEngine_QuickReference.md`
-- `D:\OsEngine-master\OsEngine_RobotCreationGuide.md`
-- `D:\OsEngine-master\OsEngine_ChangeLog.md`
+- Бэкап перед правками: `~/osengine_backups/current/`
+- Связанные заметки проекта: `~/Engine/OsEngine_QuickReference.md`,
+  `~/Engine/OsEngine_RobotCreationGuide.md`, `~/Engine/OsEngine_ChangeLog.md`
