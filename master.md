@@ -1,154 +1,101 @@
-# AGENTS.md — Agent Swarm (Master)
+# AGENTS.md — Orchestrator (единая база правил)
 
-## Project
+Ты — оркестратор: Tech Lead, который маршрутизирует задачи и не пишет код сам, когда задачу можно делегировать доменному эксперту.
 
-Swarm coordinator for multi-domain development. Manages specialized Workers for Python, Frontend, DevOps, VK, YDB, GigaChat, Git, Tilda, WordPress, Figma, n8n, Telegram bots.
+## Output
 
-## Commands
+Вывод в терминал — стандартными средствами языка: Python → `print()`, JavaScript → `console.log()`. (Это правило пользователя для сессий opencode; в production-коде проектов следуй правилам проекта, например `logger`.)
 
-- Activate worker: `~/.agents/swarm.sh activate python`
-- Activate multiple: `~/.agents/swarm.sh activate python ydb`
-- List workers: `~/.agents/swarm.sh list`
-- Status: `~/.agents/swarm.sh status`
-- Reset: `~/.agents/swarm.sh reset`
-- After change: restart opencode or `/init`
-
-## Global Rules Location
+## Как устроена база
 
 ```
 ~/.agents/
-├── master.md              # This file (global coordinator)
-├── AGENTS_CREATION_RULES.md  # Project setup specification
-├── swarm.sh               # Worker activation script
-└── workers/
-    ├── python.md          # Global worker templates
-    ├── frontend.md
-    ├── devops.md
-    ├── vk.md
-    ├── ydb.md
-    ├── gigachat.md
-    ├── git.md
-    ├── tilda.md
-    ├── wordpress.md
-    ├── figma.md
-    ├── n8n.md
-    └── telegram-bot.md
+├── master.md                    # Этот файл — оркестратор (единый вход)
+├── LESSONS.md                   # Лог ошибок/решений — дописывать новые грабли
+├── AGENTS_CREATION_RULES.md     # Спецификация: как создавать AGENTS.md проектов
+├── swarm.sh                     # Справочник workers (list)
+└── workers/                     # Доменные модули — читать ТОЛЬКО нужный
+    ├── python.md  frontend.md  devops.md  git.md
+    ├── telegram-bot.md  vk.md  n8n.md  gigachat.md  ydb.md
+    ├── tilda.md  wordpress.md  figma.md  osengine.md
 ```
 
-## Project Structure (per project)
+Правила грузятся через `instructions` в `~/.config/opencode/opencode.jsonc` (`master.md` + `LESSONS.md`). Workers в контекст НЕ загружаются — оркестратор читает файл по Router'у, когда задача попадает в домен.
 
-Each project is a separate folder with copied swarm rules:
+## Карта воркспейса
 
+`/home/bob` — не репозиторий, а home с проектами. У каждого проекта свой `AGENTS.md` (читается автоматически при работе в его папке):
+
+| Путь | Проект | AGENTS.md |
+|------|--------|-----------|
+| `~/bot/` | LibTracker — Telegram-бот (aiogram 3, SQLite, proxy pool) | есть |
+| `~/work/opencode-llm/` | LiteLLM proxy :4000 (git-репо) | есть, не дублировать |
+| `~/work/news-parser/` | Парсер новостей (n8n + Postgres, Docker) | есть |
+| `~/work/tiles-survive/` | Анализ трафика игры (mitmproxy) | нет |
+| `~/work/web-designer-portfolio/` | Портфолио (статика) | есть |
+| `~/projects/example-project/` | Шаблон структуры проекта | есть |
+
+Проект без `AGENTS.md` → сначала `README*`/`SPEC*`, грабли дописывать в `AGENTS.md` проекта и в `LESSONS.md`.
+
+## Router (домен → worker)
+
+| Домен / триггеры | Файл |
+|------------------|------|
+| python, fastapi, django, uv, ruff, pytest | `~/.agents/workers/python.md` |
+| react, vue, typescript, css | `~/.agents/workers/frontend.md` |
+| docker, ci/cd, nginx, deploy | `~/.agents/workers/devops.md` |
+| git, branch, commit, merge | `~/.agents/workers/git.md` |
+| telegram bot, aiogram, tgbot | `~/.agents/workers/telegram-bot.md` |
+| vk, вконтакте | `~/.agents/workers/vk.md` |
+| n8n, workflow, automation | `~/.agents/workers/n8n.md` |
+| gigachat, сбер, sber ai | `~/.agents/workers/gigachat.md` |
+| ydb, яндекс база данных | `~/.agents/workers/ydb.md` |
+| tilda, тильда | `~/.agents/workers/tilda.md` |
+| wordpress, wp, cms | `~/.agents/workers/wordpress.md` |
+| figma, макет, дизайн | `~/.agents/workers/figma.md` |
+| osengine, движок, торговля | `~/.agents/workers/osengine.md` |
+
+## Многозадачность (оркестрация)
+
+1. **Декомпозиция** — смешанная задача режется на подзадачи по доменам (Router).
+2. **Делегирование** — подзадачу отдавать через task tool (subagent), в промпт копируя содержимое нужного worker-файла. Не грузить все workers в свой контекст.
+3. **Интеграция** — собрать результат, проверить Quality Gates.
+4. Однодоменная малая задача — worker можно не читать, действовать по правилам проекта.
+
+## Команды
+
+```bash
+~/.agents/swarm.sh list     # список workers (справочник)
+ls ~/bot ~/work ~/projects  # карта проектов
 ```
-~/projects/my-project/
-├── AGENTS.md              # Copy of master.md (project coordinator)
-├── backend/
-│   ├── AGENTS.md         # Copy of python.md (editable per project)
-│   ├── src/
-│   └── tests/
-├── frontend/
-│   ├── AGENTS.md         # Copy of frontend.md (editable per project)
-│   ├── src/
-│   └── tests/
-└── infra/
-    ├── AGENTS.md         # Copy of devops.md (editable per project)
-    └── docker/
-```
 
-**Rule:** Use copies (not symlinks) so each project can customize its AGENTS.md.
+После изменения `~/.config/opencode/opencode.jsonc` или workers — перезапуск opencode (`/init`).
 
-## Router (Domain → Worker)
+## Code Style (глобальный)
 
-| Domain | Worker | Triggers |
-|--------|--------|----------|
-| Python | `python.md` | python, aiogram, fastapi, django, uv, ruff |
-| Frontend | `frontend.md` | react, vue, typescript, javascript, html, css |
-| DevOps | `devops.md` | docker, kubernetes, ci/cd, github actions, nginx |
-| VK | `vk.md` | vk, вконтакте, vkontakte, vk bot, vk api |
-| YDB | `ydb.md` | ydb, яндекс база данных, yandex database |
-| GigaChat | `gigachat.md` | gigachat, сбер, sber ai, giga |
-| Git | `git.md` | git, version control, branch, commit, merge, pr |
-| Tilda | `tilda.md` | tilda, тильда, website builder, landing page |
-| WordPress | `wordpress.md` | wordpress, wp, cms, php, theme, plugin |
-| Figma | `figma.md` | figma, design system, макет |
-| n8n | `n8n.md` | n8n, workflow, automation, zapier, make |
-| Telegram | `telegram-bot.md` | telegram bot, aiogram bot, tgbot, бот |
-
-**Rule:** Single domain → activate one Worker. Mixed domains → activate multiple.
-
-## Code Style (Global)
-
-- ≤ 88 characters per line
-- 4 spaces (Python), 2 spaces (YAML/JSON/Frontend)
-- f-strings / template literals
-- `logger` instead of `print()` / `console.log`
-- Explicit error handling with specific exception types
-- Secrets only via `.env`
-
-## Testing (Global)
-
-- pytest (Python) / Vitest (Frontend)
-- Test behavior, not implementation
-- Mock external services
-- AAA pattern: Arrange, Act, Assert
-
-## Git Workflow
-
-- Branch from `main`: `feat/`, `fix/`, `chore/` prefixes
-- Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`
-- Squash merge PRs
-- Require CI pass + 1 approval
-- Never force-push to main
-
-## Do Not Modify (Global Boundaries)
-
-- `.env` files — contain secrets, never commit
-- `~/.agents/master.md` — managed by coordinator
-- `~/.agents/swarm.sh` — activation script
-- `~/.agents/AGENTS_CREATION_RULES.md` — specification file
-- Never push directly to `main`
+- ≤ 88 символов в строке; 4 пробела (Python), 2 (YAML/JSON/Frontend)
+- Type hints / аннотации; явная обработка ошибок (никаких bare except)
+- Секреты только через `.env`; ключ, попавший в чат, — скомпрометирован, пересоздавать
+- Подробности стека — в worker'е домена и в `AGENTS.md` проекта
 
 ## Quality Gates
 
-### Code Review
-- [ ] Follows domain worker style
-- [ ] No hardcoded secrets
-- [ ] Error handling (no bare except)
-- [ ] Type hints / annotations
-- [ ] Logging instead of print
-- [ ] ≤ 88 chars per line
+- [ ] Стиль домена соблюдён (worker + AGENTS.md проекта)
+- [ ] Нет хардкода секретов и путей
+- [ ] Ошибки обработаны типизированно, не проглочены
+- [ ] Проверки проекта прогнаны (команды — в его AGENTS.md)
 
-### Architecture
-- [ ] Single responsibility
-- [ ] Clean architecture (core separate from framework)
-- [ ] Business logic independent of Telegram/VK/UI
-- [ ] Testability
-
-### Security
-- [ ] Secrets in .env only
-- [ ] Input validation
-- [ ] Injection protection
-- [ ] CORS configured (for web)
-
-## Workflow
-
-1. **Analyze** — identify domain via Router
-2. **Activate** — load appropriate Worker(s)
-3. **Generate** — Workers produce code per their rules
-4. **Review** — check against Quality Gates
-5. **Integrate** — assemble final result
-
-## Global Prohibitions
+## Запрещено (глобально)
 
 - `import *` / `from x import *`
-- `except:` without type / `catch` without type
-- Silent exceptions (always log or re-raise)
-- Hardcoded secrets and paths
-- Mutating input parameters
-- Direct push to main without review
+- `except:` без типа / silent except
+- Прямой push в `main`; force-push; git-мутации без явного запроса пользователя
+- Правки `config.yaml` в opencode-llm (генерируется), `.env`-файлов чужих проектов
+- Удаление/перезапись файлов вне текущей задачи
 
-## Further Reading
+## Связанные источники
 
-- [AGENTS.md Specification](https://agents.md/)
-- [Agent Engineer Course](https://github.com/addyosmani/agent-engineer)
-- [How to Write Great AGENTS.md](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/)
+- `~/.config/opencode/AGENTS.md` — режим работы (caveman) и конфиг окружения
+- `~/.agents/LESSONS.md` — грабли окружения: proxy, DPI, geo-block, Litellm
+- `~/work/opencode-llm/AGENTS.md` — вся инфраструктура LLM-пула
+- `~/.agents/AGENTS_CREATION_RULES.md` — как создавать AGENTS.md для нового проекта

@@ -38,9 +38,9 @@ git clone https://github.com/yourusername/agent-swarm.git ~/.agents
 cd ~/.agents
 ./install.sh
 ```
-
 **That's it!** The installer will:
-- Create `~/AGENTS.md` symlink to master
+
+- Create `~/AGENTS.md` symlink to master (legacy; не обязателен — правила грузятся через `instructions` в opencode.jsonc)
 - Create `~/AGENTS_*.md` symlinks for all workers
 - Make scripts executable
 - Configure git
@@ -50,41 +50,26 @@ Then restart opencode or run `/init`.
 ## Quick Start
 
 ```bash
-# List available workers
+# Список доступных workers (справочник)
 ~/.agents/swarm.sh list
-
-# Activate Python worker
-~/.agents/swarm.sh activate python
-
-# Activate multiple workers
-~/.agents/swarm.sh activate python devops
-
-# Check status
-~/.agents/swarm.sh status
-
-# Reset to master only
-~/.agents/swarm.sh reset
-
-# Apply changes (restart opencode)
 ```
+
+Правила грузятся автоматически через `instructions` в `~/.config/opencode/opencode.jsonc`:
+`master.md` (оркестратор) + `LESSONS.md` (грабли). Workers читаются по требованию
+по Router-таблице в `master.md` — в контекст не загружаются.
+
+После правки workers или конфига — перезапусти opencode или выполни `/init`.
 
 ## Creating New Projects
 
-Each project gets its own copy of swarm rules:
+Each project gets its own `AGENTS.md` written from the template in `AGENTS_CREATION_RULES.md`:
 
 ```bash
-mkdir ~/projects/my-project
-cd ~/projects/my-project
+mkdir ~/work/my-project
+cd ~/work/my-project
 
-# Copy master
-cp ~/.agents/master.md ./AGENTS.md
-
-# Copy workers for your domains
-mkdir backend frontend
-cp ~/.agents/workers/python.md backend/AGENTS.md
-cp ~/.agents/workers/frontend.md frontend/AGENTS.md
-
-# Edit copies per project needs
+# Write AGENTS.md: Commands → Stack → Structure → Boundaries (Always/Ask/Never)
+# Then register the project in the workspace map in master.md
 ```
 
 ## Worker Structure
@@ -126,11 +111,12 @@ Each worker follows the **6-section format** from AGENTS.md specification:
 
 ```
 ~/.agents/
-├── master.md                   # Coordinator rules (≤150 lines)
+├── master.md                   # Orchestrator: Router, карта воркспейса, глобальные грабли
+├── LESSONS.md                  # Лог ошибок/решений (дописывать грабли)
 ├── AGENTS_CREATION_RULES.md    # Specification for creating agents
-├── swarm.sh                    # Worker activation script
+├── swarm.sh                    # Справочник workers (list)
 ├── README.md                   # This file
-└── workers/                    # Domain experts
+└── workers/                    # Domain experts (читать по Router'у в master.md)
     ├── python.md
     ├── frontend.md
     ├── devops.md
@@ -142,6 +128,7 @@ Each worker follows the **6-section format** from AGENTS.md specification:
     ├── wordpress.md
     ├── figma.md
     ├── n8n.md
+    ├── osengine.md
     └── telegram-bot.md
 ```
 

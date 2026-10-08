@@ -3,44 +3,36 @@
 > Базируются на спецификации Addy Osmani (Agent Engineer, урок 15)
 > и анализе 2500+ репозиториев с AGENTS.md
 
-## Архитектура: Master + Workers
+## Архитектура: Orchestrator + Workers + per-project AGENTS.md
 
-### Глобальные правила (репозиторий ~/.agents/)
+### Глобальный уровень (~/.agents/)
 
 ```
 ~/.agents/
-├── master.md              # Глобальный Master (не трогать)
+├── master.md              # Оркестратор: Router, карта воркспейса, глобальные грабли
+├── LESSONS.md             # Лог ошибок/решений (дописывать грабли)
 ├── AGENTS_CREATION_RULES.md  # Этот файл (спецификация)
-├── swarm.sh               # Скрипт активации
-└── workers/
-    ├── python.md          # Глобальные Worker шаблоны
-    ├── frontend.md
-    ├── devops.md
-    └── ...
+├── swarm.sh               # Справочник workers (list)
+└── workers/               # Доменные модули — читать ТОЛЬКО нужный по Router'у
 ```
 
-### Правила на уровне проекта (каждый проект отдельно)
+Загрузка: `master.md` + `LESSONS.md` подключены через `instructions` в
+`~/.config/opencode/opencode.jsonc` — грузятся в КАЖДУЮ сессию автоматически.
+Workers в контекст не грузятся: оркестратор читает файл по Router-таблице,
+когда задача попадает в домен. Никакого codegen/активации — правишь файл,
+перезапускаешь opencode.
 
-**Каждый новый проект создаётся в отдельной папке** с копиями swarm правил.
+### Уровень проекта (один файл на проект)
 
 ```
-~/projects/
-└── my-project/            # Корень проекта
-    ├── AGENTS.md         # Копия master.md (локальный координатор)
-    ├── backend/          # Python агент работает тут
-    │   ├── AGENTS.md    # Копия python.md (редактируем под проект!)
-    │   ├── src/
-    │   └── tests/
-    ├── frontend/         # Frontend агент работает тут
-    │   ├── AGENTS.md    # Копия frontend.md (редактируем под проект!)
-    │   ├── src/
-    │   └── tests/
-    └── infra/            # DevOps агент работает тут
-        ├── AGENTS.md    # Копия devops.md (редактируем под проект!)
-        └── docker/
+~/bot/AGENTS.md            # Команды, стек, структура, грабли проекта
+~/work/news-parser/AGENTS.md
 ```
 
-**Важно:** Используются **копии** (не симлинки), чтобы можно было редактировать AGENTS.md под конкретный проект.
+**Один AGENTS.md в корне проекта.** Вложенные `backend/AGENTS.md` НЕ работают:
+OpenCode читает только ближайший AGENTS.md вверх по дереву + глобальный
+`~/.config/opencode/AGENTS.md` (см. доки opencode «Rules»). Для монорепо
+с разными стеками — разделы внутри одного файла или отдельные проекты.
 
 ### Master (AGENTS.md)
 - **Роль**: Tech Lead / Coordinator
@@ -176,15 +168,12 @@ def process_user_data(raw_data: dict[str, Any]) -> ProcessedResult:
 
 ```
 repo/
-  AGENTS.md              # Shared (Git, CI, общие правила)
-  services/
-    api/
-      AGENTS.md          # Python-specific (pytest, FastAPI)
-    frontend/
-      AGENTS.md          # TS-specific (Vitest, React)
+  AGENTS.md              # Общее: команды, git, границы
+  packages/api/          # Разделы внутри AGENTS.md для Python-специфики
+  packages/web/          # Разделы внутри AGENTS.md для TS-специфики
 ```
 
-Агент читает ближайший AGENTS.md + родительский.
+Вложенные AGENTS.md OpenCode не читает — спецификация по стеку живёт в секциях одного файла. Альтернатива: разнести подпакеты в отдельные проекты.
 
 ## Quality Gates (чеклисты Master)
 
@@ -213,39 +202,39 @@ repo/
 ### Шаг 1: Создать папку проекта
 
 ```bash
-mkdir -p ~/projects/my-project
-cd ~/projects/my-project
+mkdir -p ~/work/my-project   # или ~/projects/
 ```
 
-### Шаг 2: Скопировать Master в корень проекта
+### Шаг 2: Написать AGENTS.md в корне проекта
 
-```bash
-cp ~/.agents/master.md ./AGENTS.md
+Шаблон (6 секций, команды — первыми):
+
+```markdown
+# AGENTS.md — <Название проекта>
+
+<1-2 предложения: что делает, точка входа>
+
+## Команды
+- запуск: `...`
+- тест: `...`
+- линт: `...`
+
+## Стек
+- <Язык/фреймворк>: <версия>
+
+## Структура
+- `dir/` — назначение
+
+## Границы
+- ✅ Всегда: ...
+- ⚠️ Спросить перед: ...
+- 🚫 Никогда: ...
 ```
 
-Это глобальный координатор для проекта. Можно отредактировать под проект (добавить специфичные команды, структуру).
+### Шаг 3: Дополнить по мере ошибок
 
-### Шаг 3: Создать подпапки под домены
-
-```bash
-mkdir -p backend frontend infra
-```
-
-### Шаг 4: Скопировать Workers в подпапки
-
-```bash
-cp ~/.agents/workers/python.md    backend/AGENTS.md
-cp ~/.agents/workers/frontend.md  frontend/AGENTS.md
-cp ~/.agents/workers/devops.md    infra/AGENTS.md
-```
-
-### Шаг 5: Редактировать под проект
-
-Каждый `AGENTS.md` в подпапке можно редактировать:
-- Добавить проект-специфичные команды
-- Уточнить структуру
-- Добавить специфичные правила
-- Убрать ненужное
+- Добавляй правила, когда агент ошибается; грабли проекта — в AGENTS.md проекта, грабли окружения — в `~/.agents/LESSONS.md`
+- Дописать проект в карту воркспейса в `~/.agents/master.md`
 
 ### Пример: Иерархия AGENTS.md в проекте
 
@@ -286,35 +275,29 @@ cp ~/.agents/workers/devops.md    infra/AGENTS.md
 
 ### Как opencode читает AGENTS.md
 
-Opencode автоматически находит ближайший `AGENTS.md` в текущей директории или родителях.
+OpenCode при старте ищет правила в порядке:
 
-```
-# Если я в ~/projects/my-project/backend/
-# opencode читает:
-# 1. ~/projects/my-project/backend/AGENTS.md (python)
-# 2. ~/projects/my-project/AGENTS.md (master)
+1. **Локальный** — ближайший `AGENTS.md` вверх по дереву от cwd (первый найденный выигрывает; `CLAUDE.md` — fallback если AGENTS.md нет)
+2. **Глобальный** — `~/.config/opencode/AGENTS.md` (применяется всегда, дополняет локальный)
+3. **Claude Code** — `~/.claude/CLAUDE.md` (fallback)
 
-# Если я в ~/projects/my-project/
-# opencode читает:
-# 1. ~/projects/my-project/AGENTS.md (master)
-```
+**Важно:** вложенные AGENTS.md в подпапках проекта НЕ читаются (это поведение Cursor/Copilot, не OpenCode). Один проект = один AGENTS.md в корне.
 
-**Правило:** Работая в `backend/`, агент следует правилам `backend/AGENTS.md`. Для глобальных вещей смотрит в корень проекта.
+Дополнительные файлы подключаются через `instructions` в `opencode.json` (поддерживаются пути и URL, файлы комбинируются с AGENTS.md).
 
 ## Формат секций
 
-### Стандартная структура Worker'а
+### Стандартная структура AGENTS.md проекта
 
 ```markdown
-# AGENTS — [Домен] ([стек])
+# AGENTS — [Проект] ([стек])
+
+## Команды
+- Запуск: `...`
+- Тест: `...`
 
 ## Стек
 - **X**: version
-- **Y**: version
-
-## Команды
-- Build: `...`
-- Test: `...`
 
 ## Структура
 - `dir/` — description
@@ -327,39 +310,37 @@ Opencode автоматически находит ближайший `AGENTS.md
 ## Тестирование
 - Framework: ...
 
-## Запрещено
-- item
-
-## Best Practices
-- item with explanation
+## Границы (трёхуровневые)
+- ✅ **Всегда**: прогонять тесты перед коммитом, секреты в .env
+- ⚠️ **Спросить перед**: сменой схемы БД, правкой конфигов, удалением файлов
+- 🚫 **Никогда**: хардкод секретов, bare except, push в main
 ```
+
+Трёхуровневые границы (Always / Ask first / Never) — самая эффективная форма: предотвращает разрушительные ошибки лучше длинных списков «Запрещено».
 
 ## Примеры хороших файлов
 
 ### Master (AGENTS.md) — ~100 строк
 ```markdown
-# AGENTS.md — Agent Swarm
+# AGENTS.md — Orchestrator
 
 ## Роль
-Tech Lead. Не пишу код — координирую Workers.
+Tech Lead. Маршрутизирует задачи по Router'у, делегирует через task tool.
 
 ## Router
 | Домен | Worker |
 |-------|--------|
-| Python | python.md |
-| Frontend | frontend.md |
+| Python | ~/.agents/workers/python.md |
+| Frontend | ~/.agents/workers/frontend.md |
+
+## Карта воркспейса
+- `~/bot/` — ... (AGENTS.md есть)
+- `~/work/x/` — ... (AGENTS.md нет → README)
 
 ## Quality Gates
 - [ ] Code Review: стиль, ошибки, типы
 - [ ] Architecture: чистота, тестируемость
 - [ ] Security: секреты, валидация
-
-## Workflow
-1. Определи домен → Router
-2. Активируй Workers
-3. Workers генерируют код
-4. Master проверяет Quality Gates
-5. Интегрируй результат
 
 ## Запрещено (глобально)
 - `import *`

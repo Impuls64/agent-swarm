@@ -36,12 +36,11 @@ fi
 chmod +x swarm.sh
 echo "✅ Scripts made executable"
 
-# Create symlink for master AGENTS.md
+# Remove legacy ~/AGENTS.md (rules now load via opencode "instructions")
 if [ -L "$HOME/AGENTS.md" ] || [ -f "$HOME/AGENTS.md" ]; then
     rm -f "$HOME/AGENTS.md"
+    echo "✅ Removed legacy ~/AGENTS.md (use instructions in opencode.jsonc)"
 fi
-ln -s "$AGENTS_DIR/master.md" "$HOME/AGENTS.md"
-echo "✅ Created ~/AGENTS.md → master.md"
 
 # Create symlinks for workers inside ~/.agents/
 for worker in "$AGENTS_DIR"/workers/*.md; do
@@ -62,12 +61,6 @@ for link in "$HOME"/AGENTS_*.md; do
 done
 echo "✅ Cleaned up old ~/AGENTS_*.md symlinks"
 
-# Initialize .active file
-if [ ! -f "$AGENTS_DIR/.active" ]; then
-    touch "$AGENTS_DIR/.active"
-    echo "✅ Initialized .active file"
-fi
-
 # Git config (if not set)
 if ! git config user.name >/dev/null 2>&1; then
     git config user.name "Agent Swarm"
@@ -79,17 +72,22 @@ echo ""
 echo "🎉 Installation complete!"
 echo ""
 echo "Structure:"
-echo "  ~/AGENTS.md              → ~/.agents/master.md"
 echo "  ~/.agents/AGENTS_*.md    → workers/*.md"
 echo ""
+echo "Register rules in ~/.config/opencode/opencode.jsonc:"
+echo '  "instructions": ['
+echo '    "~/.config/opencode/AGENTS.md",'
+echo '    "~/.agents/master.md",'
+echo '    "~/.agents/LESSONS.md"'
+echo '  ]'
+echo ""
 echo "Quick start:"
-echo "  ~/.agents/swarm.sh list           # List workers"
-echo "  ~/.agents/swarm.sh activate python # Activate Python worker"
-echo "  ~/.agents/swarm.sh status         # Check status"
+echo "  ~/.agents/swarm.sh list   # List workers"
+echo "  Restart opencode or run /init to apply"
 echo ""
 echo "Then restart opencode or run /init"
 echo ""
 echo "Create new project:"
-echo "  mkdir ~/projects/my-project"
-echo "  cp ~/.agents/master.md ~/projects/my-project/AGENTS.md"
-echo "  cp ~/.agents/workers/python.md ~/projects/my-project/backend/AGENTS.md"
+echo "  mkdir ~/work/my-project"
+echo "  # write AGENTS.md from template in AGENTS_CREATION_RULES.md"
+echo "  # register it in the workspace map in master.md"
