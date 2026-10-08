@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/figma.md
+workers/figma.md

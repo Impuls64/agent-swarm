@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/ydb.md
+workers/ydb.md

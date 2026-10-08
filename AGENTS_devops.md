@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/devops.md
+workers/devops.md

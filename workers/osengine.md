@@ -367,7 +367,7 @@ Key topics:
 
 ## Backup
 
-Before editing: backup to `/home/bob/osengine_backups/current/`
+Before editing: backup to `~/osengine_backups/current/` (override per machine if backups live elsewhere).
 
 ## Error Checking & Verification Rules
 

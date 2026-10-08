@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/telegram-bot.md
+workers/telegram-bot.md

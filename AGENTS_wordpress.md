@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/wordpress.md
+workers/wordpress.md

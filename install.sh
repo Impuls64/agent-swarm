@@ -42,16 +42,16 @@ if [ -L "$HOME/AGENTS.md" ] || [ -f "$HOME/AGENTS.md" ]; then
     echo "✅ Removed legacy ~/AGENTS.md (use instructions in opencode.jsonc)"
 fi
 
-# Create symlinks for workers inside ~/.agents/
+# Create symlinks for workers inside ~/.agents/ (relative targets → portable)
 for worker in "$AGENTS_DIR"/workers/*.md; do
     name=$(basename "$worker" .md)
     link="$AGENTS_DIR/AGENTS_${name}.md"
     if [ -L "$link" ] || [ -f "$link" ]; then
         rm -f "$link"
     fi
-    ln -s "$worker" "$link"
+    ln -s "workers/${name}.md" "$link"
 done
-echo "✅ Created AGENTS_*.md symlinks in ~/.agents/"
+echo "✅ Created AGENTS_*.md symlinks (relative) in ~/.agents/"
 
 # Remove old ~/AGENTS_*.md symlinks (cleanup)
 for link in "$HOME"/AGENTS_*.md; do

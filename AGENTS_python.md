@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/python.md
+workers/python.md

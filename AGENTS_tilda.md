@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/tilda.md
+workers/tilda.md

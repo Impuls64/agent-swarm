@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/vk.md
+workers/vk.md

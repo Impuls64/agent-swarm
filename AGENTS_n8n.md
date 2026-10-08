@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/n8n.md
+workers/n8n.md

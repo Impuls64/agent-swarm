@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/git.md
+workers/git.md

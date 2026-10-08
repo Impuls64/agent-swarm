@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/frontend.md
+workers/frontend.md

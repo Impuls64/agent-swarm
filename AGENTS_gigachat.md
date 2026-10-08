@@ -1,1 +1,1 @@
-/home/bob/.agents/workers/gigachat.md
+workers/gigachat.md
